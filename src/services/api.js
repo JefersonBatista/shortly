@@ -31,10 +31,15 @@ async function getUserById(id) {
   return user;
 }
 
+async function rankUsers() {
+  const ranking = await axios.get(`${BASE_URL}/users/ranking`);
+  return ranking;
+}
+
 async function shortenLink(token, link) {
   const config = createConfig(token);
 
-  await axios.post(`${BASE_URL}/urls/shorten`, { link }, config);
+  await axios.post(`${BASE_URL}/urls/shorten`, { url: link }, config);
 }
 
 async function deleteLink(token, id) {
@@ -48,6 +53,7 @@ const api = {
   login,
   getUser,
   getUserById,
+  rankUsers,
   shortenLink,
   deleteLink,
 };

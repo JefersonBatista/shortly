@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ReactComponent as DeleteIcon } from "../../assets/DeleteIcon.svg";
 import { ReactComponent as Logo } from "../../assets/Logo.svg";
+import { ReactComponent as TrophyIcon } from "../../assets/TrophyIcon.svg";
 import { Button, Input } from "../../components/FormComponents";
 import useAuth from "../../hooks/useAuth";
 import api from "../../services/api";
@@ -17,6 +18,7 @@ import {
 
 function Home() {
   const [user, setUser] = useState(null);
+  const [ranking, setRanking] = useState(null);
   const [reload, setReload] = useState(true);
   const { auth } = useAuth();
   const [link, setLink] = useState("");
@@ -36,31 +38,34 @@ function Home() {
     }
   }
 
+  async function loadPage() {
+    setReload(false);
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const { data } = await api.getUser(auth);
+      const userId = data.id;
+      const { data: userData } = await api.getUserById(userId);
+      setUser(userData);
+
+      const { data: rankingData } = await api.rankUsers();
+      setRanking(rankingData);
+    } catch (error) {
+      console.log(error);
+      alert("Erro, recarregue a página em alguns segundos");
+      setUser({});
+    }
+  }
+
   useEffect(() => {
     if (!reload) return;
-
-    async function loadPage() {
-      setReload(false);
-      if (!auth) {
-        return;
-      }
-
-      try {
-        const { data } = await api.getUser(auth);
-        const userId = data.id;
-        const { data: userData } = await api.getUserById(userId);
-        setUser(userData);
-      } catch (error) {
-        console.log(error);
-        alert("Erro, recarregue a página em alguns segundos");
-        setUser({});
-      }
-    }
 
     loadPage();
   }, [auth, reload]);
 
-  if (auth && !user) {
+  if (auth && (!user || !ranking)) {
     return <h2>Carregando...</h2>;
   }
 
@@ -93,16 +98,33 @@ function Home() {
             Encurtar Link
           </Button>
         </Flex>
-        {user && <Urls token={auth} urls={user.shortenedUrls} />}
+        {user && (
+          <Urls token={auth} urls={user.shortenedUrls} loadPage={loadPage} />
+        )}
+
+        <Flex direction="column" gap="10px" margin="70px 0">
+          <Flex>
+            <TrophyIcon />
+            <h3>Ranking</h3>
+          </Flex>
+          <Flex direction="column" margin="10px"></Flex>
+          {ranking.map((user, index) => (
+            <span className="userInRanking" key={index}>
+              {index + 1}. {user.name} - {user.linksCount} links -{" "}
+              {user.visitCount} visualizações
+            </span>
+          ))}
+        </Flex>
       </Flex>
     </Container>
   );
 }
 
-function Urls({ token, urls }) {
+function Urls({ token, urls, loadPage }) {
   async function handleDelete(id) {
     try {
       await api.deleteLink(token, id);
+      loadPage();
     } catch (error) {
       console.log(error);
       alert("Erro, recarregue a página em alguns segundos");
